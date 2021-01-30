@@ -1,0 +1,19 @@
+name: benchmark test
+
+on: [push, pull_request]
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up golang 1.13
+        uses: actions/setup-go@v2
+        with:
+          go-version: "^1.13.1"
+      - run: go version
+      - run: cd initial-data && make
+      - run: cd webapp/public && curl -LO https://github.com/isucon/isucon9-qualify/releases/download/v2/initial.zip && unzip initial.zip && rm -rf upload && mv v3_initial_data upload
+      - run: cd initial-data && curl -LO https://github.com/isucon/isucon9-qualify/releases/download/v2/bench1.zip && unzip bench1.zip && rm -rf images && mv v3_bench1 images
+      - run: make
+      - run: ./bin/benchmarker
