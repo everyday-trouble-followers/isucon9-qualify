@@ -1,0 +1,31 @@
+name: benchmark test
+
+on: [push, pull_request]
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-18.04
+    services:
+      mysql:
+        image: mariadb:latest
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: password
+        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up golang 1.13
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.13.1"
+      - run: go version
+      - run: cd initial-data && make
+      - run: cd webapp/public && curl -LO https://github.com/isucon/isucon9-qualify/releases/download/v2/initial.zip && unzip initial.zip && rm -rf upload && mv v3_initial_data upload
+      - run: cd initial-data && curl -LO https://github.com/isucon/isucon9-qualify/releases/download/v2/bench1.zip && unzip bench1.zip && rm -rf images && mv v3_bench1 images
+      - run: make
+      - run: cd webapp/sql && mysql -h 127.0.0.1 -P 3306 -u root -ppassword< 00_create_database.sql && ./init.sh
+      - name: Start webapp
+        run: cd webapp/go && make && ./isucari &
+      - name: Run benchmarker
+        run: ./bin/benchmarker
